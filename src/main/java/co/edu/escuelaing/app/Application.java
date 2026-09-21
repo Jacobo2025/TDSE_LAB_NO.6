@@ -1,21 +1,19 @@
 package co.edu.escuelaing.app;
 
-import co.edu.escuelaing.webframework.HttpServer;
-import co.edu.escuelaing.webframework.Router;
-import co.edu.escuelaing.webframework.StaticFileService;
+import static co.edu.escuelaing.webframework.WebFramework.*;
 
 public class Application {
 
     public static void main(String[] args) throws Exception {
 
-        Router router = new Router();
+        staticfiles("/webroot");
 
-        router.register("GET", "/hello", (req, resp) -> {
+        get("/hello", (req, resp) -> {
             String name = req.getValue("name");
             return "Hello " + (name == null || name.isBlank() ? "world" : name);
         });
 
-        router.register("GET", "/square", (req, resp) -> {
+        get("/square", (req, resp) -> {
             String valueStr = req.getValue("value");
             double value;
 
@@ -32,9 +30,6 @@ public class Application {
             return "{\"input\":" + value + ",\"square\":" + square + "}";
         });
 
-        StaticFileService staticFileService = new StaticFileService("/webroot");
-        HttpServer server = new HttpServer(router, staticFileService);
-
-        server.start(8080);
+        start();
     }
 }
