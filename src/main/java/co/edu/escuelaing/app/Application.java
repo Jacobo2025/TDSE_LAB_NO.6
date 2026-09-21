@@ -1,4 +1,4 @@
-package src.main.java.co.edu.escuelaing.webframework;
+package co.edu.escuelaing.app;
 
 public class Application {
 
@@ -16,10 +16,10 @@ public class Application {
 
             return "Hello " + name;
         });
-*/
+
         get("/pi", (req, resp) ->
                 String.valueOf(Math.PI));
 
-        start();
+        start(); */
     }
 }

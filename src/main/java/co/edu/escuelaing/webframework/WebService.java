@@ -1,5 +1,6 @@
-package src.main.java.co.edu.escuelaing.webframework;
+package co.edu.escuelaing.webframework;
 
+@FunctionalInterface
 public interface WebService {
-    String call();    
+    String handle(Request request, Response response);
 }
