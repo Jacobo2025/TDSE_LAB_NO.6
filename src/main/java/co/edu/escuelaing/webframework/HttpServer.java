@@ -1,217 +1,252 @@
 package co.edu.escuelaing.webframework;
+
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
 
 public class HttpServer {
 
-    private static final Map<String, String> CONTENT_TYPES = Map.of(
-            "html", "text/html",
-            "css", "text/css",
-            "js", "text/javascript",
-            "jpg", "image/jpeg",
-            "jpeg", "image/jpeg",
-            "png", "image/png"
-    );
+    private final Router router;
+    private final StaticFileService staticFileService;
 
-    public static void main(String[] args) throws IOException {
-        int port = args.length > 0 ? Integer.parseInt(args[0]) : 8080;
-        ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Ready to receive on port " + port + "...");
+    private boolean running;
+    private ServerSocket serverSocket;
 
-        while (true) {
-            Socket clientSocket = serverSocket.accept();
-            handleConnection(clientSocket);
+    public HttpServer(
+            Router router,
+            StaticFileService staticFileService
+    ) {
+        this.router = router;
+        this.staticFileService = staticFileService;
+    }
+
+    public void start(int port) throws IOException {
+        serverSocket = new ServerSocket(port);
+        running = true;
+
+        try {
+            while (running) {
+                try (Socket clientSocket = serverSocket.accept()) {
+                    handleConnection(clientSocket);
+                }
+            }
+        } finally {
+            if (!serverSocket.isClosed()) {
+                serverSocket.close();
+            }
         }
     }
 
-    private static void handleConnection(Socket clientSocket) {
+    public void stop() {
+        running = false;
+    }
+
+    private void handleConnection(Socket clientSocket) {
+
         try (
-                clientSocket;
                 BufferedReader in = new BufferedReader(
-                        new InputStreamReader(clientSocket.getInputStream())
+                        new InputStreamReader(
+                                clientSocket.getInputStream(),
+                                StandardCharsets.UTF_8
+                        )
                 );
                 OutputStream out = clientSocket.getOutputStream()
         ) {
+
+            // 1. Leer la primera línea
             String requestLine = in.readLine();
+
             if (requestLine == null || requestLine.isBlank()) {
+                sendError(out, 400, "Bad Request");
                 return;
             }
 
+            // 2. Parsear method y rawTarget
             String[] parts = requestLine.split(" ");
+
             if (parts.length < 2) {
                 sendError(out, 400, "Bad Request");
                 return;
             }
 
             String method = parts[0];
+            String rawTarget = parts[1];
+
             if (!method.equals("GET")) {
                 sendError(out, 405, "Method Not Allowed");
                 return;
             }
 
-            String rawPath = parts[1];
-            String path = rawPath;
-            String queryString = "";
+            // 3. Crear Request
+            Request request;
 
-            int qIndex = rawPath.indexOf('?');
-            if (qIndex != -1) {
-                path = rawPath.substring(0, qIndex);
-                queryString = rawPath.substring(qIndex + 1);
-            }
-
-            // --- Servicios hardcoded (Sección 4) ---
-            if (path.equals("/api/greeting")) {
-                handleGreeting(out, queryString);
-                return;
-            }
-            if (path.equals("/api/square")) {
-                handleSquare(out, queryString);
-                return;
-            }
-            if (path.equals("/api/time")) {
-                handleTime(out);
-                return;
-            }
-            if (path.equals("/api/health")) {
-                handleHealth(out);
-                return;
-            }
-
-            // --- Recursos estáticos (Sección 3) ---
-            if (path.contains("..")) {
+            try {
+                request = new Request(method, rawTarget);
+            } catch (IllegalArgumentException e) {
                 sendError(out, 400, "Bad Request");
                 return;
             }
 
-            if (path.equals("/")) {
-                path = "/webroot/index.html";
-            }
+            // 4. Buscar ruta dinámica
+            Optional<WebService> handler =
+                    router.resolve(
+                            request.getMethod(),
+                            request.getPath()
+                    );
 
-            String resourcePath = "/public" + path;
-            InputStream resource = HttpServer.class.getResourceAsStream(resourcePath);
-            if (resource == null) {
-                sendError(out, 404, "Not Found");
+            if (handler.isPresent()) {
+
+                Response response = new Response();
+
+                try {
+                    String body = handler.get().handle(
+                            request,
+                            response
+                    );
+
+                    sendResponse(
+                            out,
+                            response.getStatus(),
+                            response.getContentType(),
+                            body
+                    );
+
+                } catch (Exception e) {
+                    sendError(
+                            out,
+                            500,
+                            "Internal Server Error"
+                    );
+                }
+
                 return;
             }
 
-            String contentType = resolveContentType(path);
-            byte[] content = resource.readAllBytes();
-            resource.close();
+            // 4b. Buscar archivo estático
+            Optional<StaticFile> staticFile =
+                    staticFileService.find(request.getPath());
 
-            String responseHeaders =
-                    "HTTP/1.1 200 OK\r\n"
-                            + "Content-Type: " + contentType + "\r\n"
-                            + "Content-Length: " + content.length + "\r\n"
-                            + "\r\n";
+            if (staticFile.isPresent()) {
 
-            out.write(responseHeaders.getBytes(StandardCharsets.UTF_8));
-            out.write(content);
+                StaticFile file = staticFile.get();
+
+                sendResponse(
+                        out,
+                        200,
+                        file.contentType(),
+                        file.content()
+                );
+
+                return;
+            }
+
+            // 4c. No existe ruta ni archivo
+            sendError(out, 404, "Not Found");
 
         } catch (IOException e) {
-            System.out.println("Error handling client: " + e.getMessage());
+            // La conexión actual falló.
+            // No dejamos que una conexión defectuosa
+            // detenga todo el servidor.
         }
     }
 
-    // ---------- Servicios ----------
+    private void sendResponse(
+            OutputStream out,
+            int status,
+            String contentType,
+            String body
+    ) throws IOException {
 
-    private static void handleGreeting(OutputStream out, String queryString) throws IOException {
-        Map<String, String> params = parseQuery(queryString);
-        String name = params.get("name");
+        byte[] content =
+                body.getBytes(StandardCharsets.UTF_8);
 
-        if (name == null || name.isBlank()) {
-            sendError(out, 400, "Bad Request: missing 'name' parameter");
-            return;
-        }
+        String response =
+                "HTTP/1.1 " +
+                        status +
+                        " " +
+                        statusText(status) +
+                        "\r\n" +
+                        "Content-Type: " +
+                        contentType +
+                        "\r\n" +
+                        "Content-Length: " +
+                        content.length +
+                        "\r\n" +
+                        "Connection: close\r\n" +
+                        "\r\n";
 
-        String json = "{\"greeting\":\"Hello, " + escapeJson(name) + "!\"}";
-        sendJson(out, 200, "OK", json);
+        out.write(
+                response.getBytes(StandardCharsets.UTF_8)
+        );
+
+        out.write(content);
+        out.flush();
     }
 
-    private static void handleSquare(OutputStream out, String queryString) throws IOException {
-        Map<String, String> params = parseQuery(queryString);
-        String valueStr = params.get("value");
-        double value;
+    private void sendResponse(
+            OutputStream out,
+            int status,
+            String contentType,
+            byte[] content
+    ) throws IOException {
 
-        try {
-            value = Double.parseDouble(valueStr);
-        } catch (Exception e) {
-            sendError(out, 400, "Bad Request: invalid or missing 'value' parameter");
-            return;
-        }
+        String response =
+                "HTTP/1.1 " +
+                        status +
+                        " " +
+                        statusText(status) +
+                        "\r\n" +
+                        "Content-Type: " +
+                        contentType +
+                        "\r\n" +
+                        "Content-Length: " +
+                        content.length +
+                        "\r\n" +
+                        "Connection: close\r\n" +
+                        "\r\n";
 
-        double square = value * value;
-        String json = "{\"input\":" + value + ",\"square\":" + square + "}";
-        sendJson(out, 200, "OK", json);
+        out.write(
+                response.getBytes(StandardCharsets.UTF_8)
+        );
+
+        out.write(content);
+        out.flush();
     }
 
-    private static void handleTime(OutputStream out) throws IOException {
-        String json = "{\"serverTime\":\"" + LocalDateTime.now() + "\"}";
-        sendJson(out, 200, "OK", json);
+    private void sendError(
+            OutputStream out,
+            int status,
+            String message
+    ) throws IOException {
+
+        String body =
+                "<html><body><h1>" +
+                        status +
+                        " " +
+                        message +
+                        "</h1></body></html>";
+
+        sendResponse(
+                out,
+                status,
+                "text/html",
+                body
+        );
     }
 
-    private static void handleHealth(OutputStream out) throws IOException {
-        sendJson(out, 200, "OK", "{\"status\":\"UP\"}");
-    }
-
-    // ---------- Utilidades ----------
-
-    private static Map<String, String> parseQuery(String queryString) {
-        Map<String, String> params = new HashMap<>();
-        if (queryString == null || queryString.isBlank()) {
-            return params;
-        }
-
-        for (String pair : queryString.split("&")) {
-            String[] kv = pair.split("=", 2);
-            String key = URLDecoder.decode(kv[0], StandardCharsets.UTF_8);
-            String value = kv.length > 1 ? URLDecoder.decode(kv[1], StandardCharsets.UTF_8) : "";
-            params.put(key, value);
-        }
-        return params;
-    }
-
-    private static String escapeJson(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
-
-    private static void sendJson(OutputStream out, int status, String reason, String json) throws IOException {
-        byte[] body = json.getBytes(StandardCharsets.UTF_8);
-        String headers = "HTTP/1.1 " + status + " " + reason + "\r\n"
-                + "Content-Type: application/json\r\n"
-                + "Content-Length: " + body.length + "\r\n"
-                + "\r\n";
-
-        out.write(headers.getBytes(StandardCharsets.UTF_8));
-        out.write(body);
-    }
-
-    private static void sendError(OutputStream out, int statusCode, String statusMessage) throws IOException {
-        byte[] body = statusMessage.getBytes(StandardCharsets.UTF_8);
-        String response = "HTTP/1.1 " + statusCode + " " + statusMessage + "\r\n"
-                + "Content-Type: text/plain\r\n"
-                + "Content-Length: " + body.length + "\r\n"
-                + "\r\n";
-
-        out.write(response.getBytes(StandardCharsets.UTF_8));
-        out.write(body);
-    }
-
-    private static String resolveContentType(String path) {
-        int dotIndex = path.lastIndexOf(".");
-        if (dotIndex == -1) {
-            return "application/octet-stream";
-        }
-        String extension = path.substring(dotIndex + 1);
-        return CONTENT_TYPES.getOrDefault(extension, "application/octet-stream");
+    private String statusText(int status) {
+        return switch (status) {
+            case 200 -> "OK";
+            case 400 -> "Bad Request";
+            case 404 -> "Not Found";
+            case 405 -> "Method Not Allowed";
+            case 500 -> "Internal Server Error";
+            default -> "";
+        };
     }
 }

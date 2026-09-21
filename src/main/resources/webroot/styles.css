@@ -1,0 +1,28 @@
+body {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+}
+
+header {
+    margin-bottom: 30px;
+}
+
+section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+input, button {
+    padding: 6px 10px;
+    font-size: 1rem;
+}
+
+#error-area {
+    color: #c0392b;
+    font-weight: bold;
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Framework Lab</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+    <h1>Java Web Framework</h1>
+    <p>Static files + lambda-based dynamic routes, served by a custom HTTP server.</p>
+    <img src="/images/logo.png" alt="logo" width="80">
+</header>
+
+<main>
+    <section>
+        <h2>Greeting service</h2>
+        <form id="greeting-form">
+            <input type="text" id="name-input" placeholder="Your name">
+            <button type="submit">Say hello</button>
+        </form>
+        <p id="greeting-result"></p>
+    </section>
+
+    <section>
+        <h2>Square service</h2>
+        <form id="square-form">
+            <input type="number" id="number-input" placeholder="A number" step="any">
+            <button type="submit">Square it</button>
+        </form>
+        <p id="square-result"></p>
+    </section>
+</main>
+
+<p id="error-area"></p>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,25 +1,40 @@
 package co.edu.escuelaing.app;
 
+import co.edu.escuelaing.webframework.HttpServer;
+import co.edu.escuelaing.webframework.Router;
+import co.edu.escuelaing.webframework.StaticFileService;
+
 public class Application {
 
     public static void main(String[] args) throws Exception {
-/* 
 
-        staticfiles("/webroot");
+        Router router = new Router();
 
-        get("/hello", (req, resp) -> {
+        router.register("GET", "/hello", (req, resp) -> {
             String name = req.getValue("name");
-
-            if (name == null || name.isBlank()) {
-                name = "world";
-            }
-
-            return "Hello " + name;
+            return "Hello " + (name == null || name.isBlank() ? "world" : name);
         });
 
-        get("/pi", (req, resp) ->
-                String.valueOf(Math.PI));
+        router.register("GET", "/square", (req, resp) -> {
+            String valueStr = req.getValue("value");
+            double value;
 
-        start(); */
+            try {
+                value = Double.parseDouble(valueStr);
+            } catch (Exception e) {
+                resp.setStatus(400);
+                resp.setContentType("application/json");
+                return "{\"error\":\"invalid or missing 'value' parameter\"}";
+            }
+
+            resp.setContentType("application/json");
+            double square = value * value;
+            return "{\"input\":" + value + ",\"square\":" + square + "}";
+        });
+
+        StaticFileService staticFileService = new StaticFileService("/webroot");
+        HttpServer server = new HttpServer(router, staticFileService);
+
+        server.start(8080);
     }
 }
