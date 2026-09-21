@@ -2,5 +2,7 @@ co/edu/escuelaing/webframework/Response.class
 co/edu/escuelaing/app/Application.class
 co/edu/escuelaing/webframework/Request.class
 co/edu/escuelaing/webframework/WebFramework.class
+co/edu/escuelaing/webframework/Route.class
 co/edu/escuelaing/webframework/HttpServer.class
+co/edu/escuelaing/webframework/Router.class
 co/edu/escuelaing/webframework/WebService.class

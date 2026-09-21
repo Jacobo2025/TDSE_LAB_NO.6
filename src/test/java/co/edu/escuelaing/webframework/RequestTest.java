@@ -1,3 +1,4 @@
+
 package co.edu.escuelaing.webframework;
 
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,29 @@ public class RequestTest {
         );
 
         assertEquals("Bob Dylan", request.getValue("name"));
+    }
+
+    @Test
+    void shouldThrowExceptionForInvalidEncoding() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Request("GET", "/users?name=%")
+        );
+    }
+
+    @Test
+    void shouldReturnEmptyValueForFlagParameter() {
+        Request request = new Request("GET", "/users?flag");
+
+        assertEquals("", request.getValue("flag"));
+    }
+
+    @Test
+    void shouldIgnoreEmptyQueryParameters() {
+        Request request = new Request("GET", "/users?a=1&&b=2");
+
+        assertEquals("1", request.getValue("a"));
+        assertEquals("2", request.getValue("b"));
     }
 }
 

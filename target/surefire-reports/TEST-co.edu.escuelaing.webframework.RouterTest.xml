@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="co.edu.escuelaing.webframework.RequestTest" time="0.107" tests="10" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="co.edu.escuelaing.webframework.RouterTest" time="0.031" tests="7" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -53,14 +53,11 @@
     <property name="sun.io.unicode.encoding" value="UnicodeLittle"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="shouldHandleRequestWithoutQueryParameters" classname="co.edu.escuelaing.webframework.RequestTest" time="0.042"/>
-  <testcase name="shouldThrowExceptionForInvalidEncoding" classname="co.edu.escuelaing.webframework.RequestTest" time="0.004"/>
-  <testcase name="shouldParseMultipleQueryParameters" classname="co.edu.escuelaing.webframework.RequestTest" time="0.002"/>
-  <testcase name="shouldParseQueryParameter" classname="co.edu.escuelaing.webframework.RequestTest" time="0.002"/>
-  <testcase name="shouldParseMethod" classname="co.edu.escuelaing.webframework.RequestTest" time="0.001"/>
-  <testcase name="shouldReturnEmptyValueForFlagParameter" classname="co.edu.escuelaing.webframework.RequestTest" time="0.002"/>
-  <testcase name="shouldDecodeQueryParameters" classname="co.edu.escuelaing.webframework.RequestTest" time="0.001"/>
-  <testcase name="shouldIgnoreEmptyQueryParameters" classname="co.edu.escuelaing.webframework.RequestTest" time="0.001"/>
-  <testcase name="shouldReturnNullForMissingParameter" classname="co.edu.escuelaing.webframework.RequestTest" time="0.001"/>
-  <testcase name="shouldParsePath" classname="co.edu.escuelaing.webframework.RequestTest" time="0.002"/>
+  <testcase name="shouldExecuteResolvedHandler" classname="co.edu.escuelaing.webframework.RouterTest" time="0.002"/>
+  <testcase name="shouldAllowSamePathWithDifferentMethods" classname="co.edu.escuelaing.webframework.RouterTest" time="0.002"/>
+  <testcase name="shouldReturnEmptyForDifferentMethod" classname="co.edu.escuelaing.webframework.RouterTest" time="0.002"/>
+  <testcase name="shouldReturnEmptyForTrailingSlash" classname="co.edu.escuelaing.webframework.RouterTest" time="0.002"/>
+  <testcase name="shouldRegisterAndResolveRoute" classname="co.edu.escuelaing.webframework.RouterTest" time="0.002"/>
+  <testcase name="shouldThrowExceptionWhenRouteAlreadyExists" classname="co.edu.escuelaing.webframework.RouterTest" time="0.011"/>
+  <testcase name="shouldReturnEmptyWhenRouteDoesNotExist" classname="co.edu.escuelaing.webframework.RouterTest" time="0.001"/>
 </testsuite>
