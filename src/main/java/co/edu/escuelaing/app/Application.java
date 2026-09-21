@@ -10,7 +10,14 @@ public class Application {
 
         get("/hello", (req, resp) -> {
             String name = req.getValue("name");
-            return "Hello " + (name == null || name.isBlank() ? "world" : name);
+            if (name == null || name.isBlank()) {
+                name = "world";
+            }
+
+            String greetingPrefix = System.getenv()
+                    .getOrDefault("GREETING_PREFIX", "Hello");
+
+            return greetingPrefix + " " + name;
         });
 
         get("/square", (req, resp) -> {
@@ -29,6 +36,17 @@ public class Application {
             double square = value * value;
             return "{\"input\":" + value + ",\"square\":" + square + "}";
         });
+
+        // /shutdown solo disponible en desarrollo, nunca en producción.
+        String environment = System.getenv()
+                .getOrDefault("APP_ENV", "development");
+
+        if (!environment.equals("production")) {
+            get("/shutdown", (req, resp) -> {
+                stop();
+                return "Server will stop after this response.";
+            });
+        }
 
         start();
     }
